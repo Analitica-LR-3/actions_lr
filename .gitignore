@@ -59,6 +59,9 @@ target/
 # DotEnv configuration
 .env
 
+# Virtual environment
+.observatory
+
 # Database
 *.db
 *.rdb
@@ -88,4 +91,11 @@ target/
 # Mypy cache
 .mypy_cache/
 
-# Provisional repositories and files
+# Provisional files and repositories
+streamlit_app.ipynb
+streamlit_app_multipages.py
+daily_actions_old.py
+credentials_personal.json
+make_dataset_base.py
+/notebooks/
+/pages_unused/

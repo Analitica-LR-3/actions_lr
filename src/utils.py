@@ -26,30 +26,3 @@ DAILY_ACTIONS_DTYPES_DICT = {
     'Actividades rutinarias': object,
     'Fecha': object
 }
-
-SPANISH_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-                    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-
-def format_date():
-    now = datetime.datetime.now() - datetime.timedelta(hours=5)
-    day = now.strftime("%d")
-    month = now.month
-    year = now.strftime("%Y")
-    hour_24 = now.hour
-    minute = now.strftime("%M")
-    if hour_24 == 0:
-        hour_12 = 12
-        period = 'AM'
-    elif hour_24 < 12:
-        hour_12 = hour_24
-        period = 'AM'
-    elif hour_24 == 12:
-        hour_12 = 12
-        period = 'PM'
-    else:
-        hour_12 = hour_24 - 12
-        period = 'PM'
-    spanish_month = SPANISH_MONTHS[month - 1]
-    formatted_date = f"{day} de {spanish_month} de {year} {hour_12}:{minute} {period}"
-
-    return formatted_date
