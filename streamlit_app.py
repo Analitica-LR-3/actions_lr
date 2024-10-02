@@ -105,7 +105,7 @@ def generate_pdf(df):
     table.setStyle(style)
 
     # Add logo image
-    logo = Image("reports/figures/Logo Delegacion.png", width=60, height=60)
+    logo = Image("reports/figures/Logo Partido.png", width=60, height=60)
 
     # Title on the left
     title = Paragraph("Acciones de Libertad Religiosa, Consolidado Nacional", title_style)
