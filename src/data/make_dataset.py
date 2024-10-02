@@ -73,7 +73,7 @@ class DailyActionsWrangling:
         
         for sheet in sheet_names:
             df_new = read_google_spreadsheet(sheet_name=sheet)
-            df_new = DailyActionsWrangling.format_columns(df_new)
+            # df_new = DailyActionsWrangling.format_columns(df_new)
             
             # Assign a rank based on the sheet name
             df_new['SheetOrder'] = sheet_order.get(sheet, float('inf'))  # Default to inf if sheet not found
