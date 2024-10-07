@@ -228,6 +228,7 @@ def main():
             mime="application/pdf"
         )
 
+    # Hide Streamlit's menu and footer
     hide_streamlit_style = """
                 <style>
                 #MainMenu {visibility: hidden;}
