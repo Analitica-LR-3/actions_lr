@@ -9,7 +9,8 @@ from reportlab.lib.enums import TA_LEFT
 from src.data.make_dataset import DailyActionsWrangling
 
 SPANISH_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-                    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+                  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
 
 def format_date():
     now = datetime.datetime.now() - datetime.timedelta(hours=5)
@@ -35,21 +36,20 @@ def format_date():
 
     return formatted_date
 
+
 @st.cache_data
 def get_data():
     daw = DailyActionsWrangling()
     return daw.make_daily_actions_dataset()
 
+
 def generate_pdf(df):
     buffer = BytesIO()
-    # Use landscape orientation and reduce margins
     doc = SimpleDocTemplate(buffer, pagesize=landscape(letter),
                             leftMargin=5, rightMargin=5, topMargin=15, bottomMargin=15)
 
-    # Define custom styles for text
     styles = getSampleStyleSheet()
 
-    # Bold title style with Times-Bold
     title_style = ParagraphStyle(
         'Title',
         fontName='Times-Bold',
@@ -58,7 +58,6 @@ def generate_pdf(df):
         spaceAfter=10
     )
 
-    # Bold subtitle style
     subtitle_style = ParagraphStyle(
         'Subtitle',
         fontName='Times-Bold',
@@ -67,7 +66,6 @@ def generate_pdf(df):
         spaceAfter=10
     )
 
-    # Define custom style for wrapping text in paragraphs
     custom_paragraph_style = ParagraphStyle(
         'Custom',
         fontName='Times-Roman',
@@ -78,20 +76,15 @@ def generate_pdf(df):
         maxLineLength=None,
     )
 
-    # Prepare the data for the table, wrap text in Paragraphs
     data = [[Paragraph(str(col), custom_paragraph_style) for col in df.columns]]
     for i, row in df.iterrows():
         data.append([Paragraph(str(cell), custom_paragraph_style) for cell in row])
 
-    # Define column widths
     col_widths = [40, 45, 55, 55, 120, 55, 180]
 
-    # Create the table with data
     table = Table(data, colWidths=col_widths, repeatRows=1)
 
-    # Apply styles to the table
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), '#f5f5f5'),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -104,120 +97,132 @@ def generate_pdf(df):
     ])
     table.setStyle(style)
 
-    # Add logo image
     logo = Image("reports/figures/Logo_Partido.jpeg", width=60, height=35)
 
-    # Title on the left
     title = Paragraph("Acciones de Libertad Religiosa, Consolidado Nacional", title_style)
-
-    # Subtitle above the title
     formatted_date = format_date()
     subtitle_text = f"Cohorte {formatted_date}"
     subtitle = Paragraph(subtitle_text, subtitle_style)
 
-    # Add an empty paragraph to create space between the title, logo, and the table
     empty_paragraph = Paragraph("<br/><br/>", custom_paragraph_style)
 
-    # Create a layout to have title and subtitle at the left, and logo at the right
     header_layout = Table([[title, logo], [subtitle, '']], colWidths=[450, 90])
 
-    # Align the logo to the right in the table
     header_layout.setStyle(TableStyle([
         ('SPAN', (0, 0), (0, 0)),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (1, 0), (1, 0), 'RIGHT')
     ]))
 
-    # Create the list of elements to be added to the PDF
     elements = [header_layout, empty_paragraph, table]
-
-    # Build the PDF
     doc.build(elements)
     buffer.seek(0)
     return buffer
 
+
 def main():
     st.title('Acciones Diarias')
 
+    # Initialize filters in session state if not already set
+    if 'departamento_filter' not in st.session_state:
+        st.session_state.departamento_filter = 'Todos'
+    if 'municipio_filter' not in st.session_state:
+        st.session_state.municipio_filter = []
+    if 'tipo_usuario_filter' not in st.session_state:
+        st.session_state.tipo_usuario_filter = []
+    if 'usuario_filter' not in st.session_state:
+        st.session_state.usuario_filter = []
+    if 'accion_filter' not in st.session_state:
+        st.session_state.accion_filter = []
+    if 'fecha_filter' not in st.session_state:
+        st.session_state.fecha_filter = []
+
+    # Clear Filters Button
+    if st.button('Limpiar filtros', key="clear_filters"):
+        st.session_state.departamento_filter = 'Todos'
+        st.session_state.municipio_filter = []
+        st.session_state.tipo_usuario_filter = []
+        st.session_state.usuario_filter = []
+        st.session_state.accion_filter = []
+        st.session_state.fecha_filter = []
+
+    # Refresh Button
     refresh = st.button('Refrescar datos')
 
     if 'data' not in st.session_state or refresh:
         st.session_state.data = get_data()
 
     df = st.session_state.data
-    df.columns = ['Elemento esencial LR', 'Fecha', 'Departamento', 'Municipio', 'Usuario', 'Tipo usuario', 'Acción diaria']
+    df = df[['Acción', 'Fecha', 'Departamento', 'Municipio', 'Tipo Usuario', 'Usuario', 'Actividades rutinarias']]
+    df.columns = ['Elemento esencial LR', 'Fecha', 'Departamento', 'Municipio', 'Tipo usuario', 'Usuario', 'Acción diaria']
 
-    # Filter options
-    departamentos = sorted(df['Departamento'].unique().tolist())
-    municipios = sorted(df['Municipio'].unique().tolist())
-    usuarios = sorted(df['Usuario'].unique().tolist())
-    tipos_usuario = sorted(df['Tipo usuario'].unique().tolist())
-    
-    # Initialize session state for selected filters if not already set
-    if 'selected_departamento' not in st.session_state:
-        st.session_state.selected_departamento = None
+    # Start with the original DataFrame
+    filtered_df = df.copy()
 
-    if 'selected_municipio' not in st.session_state:
-        st.session_state.selected_municipio = None
-
-    if 'selected_usuario' not in st.session_state:
-        st.session_state.selected_usuario = None
-
-    if 'selected_tipo_usuario' not in st.session_state:
-        st.session_state.selected_tipo_usuario = None
-
-    # Update filter options based on previous selections
-    departamento_filter = st.selectbox('Departamento', ['Todos'] + departamentos)
-    
+    # Departamento filter
+    departamento_filter = st.selectbox(
+        'Departamento', 
+        ['Todos'] + sorted(df['Departamento'].unique()),
+        key="departamento_filter"
+    )
     if departamento_filter != 'Todos':
-        st.session_state.selected_departamento = departamento_filter
-    else:
-        st.session_state.selected_departamento = None
+        filtered_df = filtered_df[filtered_df['Departamento'] == departamento_filter]
 
-    if st.session_state.selected_departamento:
-        municipios_filtered = df[df['Departamento'] == st.session_state.selected_departamento]['Municipio'].unique().tolist()
-        municipio_filter = st.selectbox('Municipio', ['Todos'] + sorted(municipios_filtered))
-    else:
-        municipio_filter = st.selectbox('Municipio', ['Todos'] + sorted(municipios))
+    # Municipio filter
+    municipio_filter = st.multiselect(
+        'Municipio', 
+        sorted(filtered_df['Municipio'].unique()),
+        key="municipio_filter",
+        placeholder="Elige una o varias opciones"
+    )
+    if municipio_filter:
+        filtered_df = filtered_df[filtered_df['Municipio'].isin(municipio_filter)]
 
-    if municipio_filter != 'Todos':
-        st.session_state.selected_municipio = municipio_filter
-    else:
-        st.session_state.selected_municipio = None
-
-    if st.session_state.selected_departamento:
-        filtered_df = df[df['Departamento'] == st.session_state.selected_departamento]
-    else:
-        filtered_df = df
-
-    if st.session_state.selected_municipio:
-        filtered_df = filtered_df[filtered_df['Municipio'] == st.session_state.selected_municipio]
-
-    # Update Usuario and Tipo usuario filters based on Municipio selection
-    if st.session_state.selected_municipio:
-        usuarios_filtered = filtered_df['Usuario'].unique().tolist()
-        tipos_usuario_filtered = filtered_df['Tipo usuario'].unique().tolist()
-    else:
-        usuarios_filtered = usuarios
-        tipos_usuario_filtered = tipos_usuario
-
-    accion_filter = st.multiselect('Elemento esencial LR', filtered_df['Elemento esencial LR'].unique().tolist())
-    fecha_filter = st.multiselect('Fecha', filtered_df['Fecha'].unique().tolist())
-    usuario_filter = st.multiselect('Usuario', sorted(usuarios_filtered))
-    tipo_usuario_filter = st.multiselect('Tipo usuario', sorted(tipos_usuario_filtered))
-
-    if accion_filter:
-        filtered_df = filtered_df[filtered_df['Elemento esencial LR'].isin(accion_filter)]
-    if fecha_filter:
-        filtered_df = filtered_df[filtered_df['Fecha'].isin(fecha_filter)]
-    if usuario_filter:
-        filtered_df = filtered_df[filtered_df['Usuario'].isin(usuario_filter)]
+    # Tipo usuario filter
+    tipo_usuario_filter = st.multiselect(
+        'Tipo usuario', 
+        sorted(filtered_df['Tipo usuario'].unique()),
+        key="tipo_usuario_filter",
+        placeholder="Elige una o varias opciones"
+    )
     if tipo_usuario_filter:
         filtered_df = filtered_df[filtered_df['Tipo usuario'].isin(tipo_usuario_filter)]
 
+    # Usuario filter
+    usuario_filter = st.multiselect(
+        'Usuario', 
+        sorted(filtered_df['Usuario'].unique()),
+        key="usuario_filter",
+        placeholder="Elige una o varias opciones"
+    )
+    if usuario_filter:
+        filtered_df = filtered_df[filtered_df['Usuario'].isin(usuario_filter)]
+
+    # Elemento esencial LR filter
+    accion_filter = st.multiselect(
+        'Elemento esencial LR', 
+        sorted(filtered_df['Elemento esencial LR'].unique()),
+        key="accion_filter",
+        placeholder="Elige una o varias opciones"
+    )
+    if accion_filter:
+        filtered_df = filtered_df[filtered_df['Elemento esencial LR'].isin(accion_filter)]
+
+    # Fecha filter
+    fecha_filter = st.multiselect(
+        'Fecha', 
+        sorted(filtered_df['Fecha'].unique()),
+        key="fecha_filter",
+        placeholder="Elige una o varias opciones"
+    )
+    if fecha_filter:
+        filtered_df = filtered_df[filtered_df['Fecha'].isin(fecha_filter)]
+
+    # Display the filtered DataFrame
     st.write(" ")
     st.dataframe(filtered_df)
 
+    # Export to PDF
     now = (datetime.datetime.now() - datetime.timedelta(hours=5)).strftime("%Y_%m_%d-%H_%M")
     if st.button('Exportar como PDF'):
         pdf_buffer = generate_pdf(filtered_df)
@@ -227,6 +232,6 @@ def main():
             file_name=f"acciones_diarias-{now}.pdf",
             mime="application/pdf"
         )
-    
+
 if __name__ == "__main__":
     main()
